@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane prefHeight="509.0" prefWidth="600" xmlns="http://javafx.com/javafx/11.0.14-internal" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.teche.simplesftpclient.controllers.Home">
+    <top>
+        <HBox fx:id="menuHBox" fillHeight="true" prefHeight="25.0" prefWidth="568.0">
+            <children>
+                <MenuBar>
+                    <Menu text="File">
+                        <items>
+                            <MenuItem onAction="#exit" text="Exit" />
+                        </items>
+                    </Menu>
+                    <Menu text="Edit">
+                        <items>
+                            <MenuItem onAction="#copy" text="Copy" />
+                            <MenuItem onAction="#paste" text="Paste" />
+                        </items>
+                    </Menu>
+                    <Menu text="Help">
+                        <items>
+                            <MenuItem onAction="#about" text="About" />
+                        </items>
+                    </Menu>
+                </MenuBar>
+                <Button visible="false" />
+                <Button visible="false" />
+                <Button visible="false" />
+                <Button visible="false" />
+                <Button visible="false" />
+                <Button visible="false" />
+                <Button visible="false" />
+                <Button visible="false" />
+                <TextField fx:id="searchText" alignment="CENTER_RIGHT" onKeyPressed="#searchTextKeyPressedEvent" visible="false" />
+                <Button fx:id="searchButton" alignment="CENTER_RIGHT" onAction="#find" text="Find" visible="false" />
+                <Button fx:id="closeFindButton" alignment="CENTER_RIGHT" onAction="#closeFind" text="Close Find" visible="false" />
+                <Button visible="false" />
+                <Button fx:id="closeFileButton" onAction="#closeFile" text="Close File" visible="false" />
+            </children>
+            <BorderPane.margin>
+                <Insets bottom="3.0" left="5.0" top="5.0" />
+            </BorderPane.margin>
+        </HBox>
+    </top>
+    <left>
+        <VBox fx:id="homeVBox" fillWidth="true">
+            <children>
+                <TreeView fx:id="remoteTree" onMouseClicked="#showSelectedItem" onMouseDragEntered="#remoteTreeDragEntered" prefHeight="469.0" prefWidth="300.0" />
+            </children>
+        </VBox>
+    </left>
+    <center>
+        <GridPane>
+            <children>
+                <TextArea fx:id="fileContent" editable="false" onKeyPressed="#keyPressedFunctions" GridPane.columnIndex="0" GridPane.hgrow="ALWAYS" GridPane.rowIndex="0" GridPane.vgrow="ALWAYS" />
+            </children>
+            <columnConstraints>
+                <ColumnConstraints />
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints />
+            </rowConstraints>
+        </GridPane>
+    </center>
+</BorderPane>

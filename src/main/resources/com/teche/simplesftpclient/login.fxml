@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+
+<?import javafx.scene.layout.GridPane?>
+<DialogPane xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/11.0.14-internal" fx:controller="com.teche.simplesftpclient.SimpleSFTPClient">
+    <headerText>
+    </headerText>
+    <content>
+        <GridPane hgap="10" vgap="10">
+            <Label text="Host:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+            <TextField fx:id="hostText" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+            <Label text="Port:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+            <TextField fx:id="portText" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+            <Label text="Username:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+            <TextField fx:id="usernameText" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+            <Label text="Password:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+            <PasswordField fx:id="passwordText" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+            <Button text="Login" onAction="#login" GridPane.rowIndex="4" GridPane.columnIndex="0" defaultButton="true"/>
+            <Label fx:id="message" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        </GridPane>
+    </content>
+</DialogPane>
