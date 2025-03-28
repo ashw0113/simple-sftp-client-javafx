@@ -16,6 +16,8 @@ import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
 
 public class SimpleSFTPClient extends Application {
 
@@ -36,7 +38,7 @@ public class SimpleSFTPClient extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(SimpleSFTPClient.class.getResource("login.fxml"));
-        Scene scene = new Scene(fxmlLoader.load(), 450, 600);
+        Scene scene = new Scene(fxmlLoader.load(), 350, 230);
         stage.setScene(scene);
         stage.show();
     }
@@ -52,18 +54,23 @@ public class SimpleSFTPClient extends Application {
             session.setPassword(password);
             session.setConfig("StrictHostKeyChecking", "no");
             session.setConfig("PreferredAuthentications", "publickey,keyboard-interactive,password");
+            session.setConfig("compression.c2s", "zlib,none");
             this.session.connect(10000); // 5 seconds timeout
             sftpChannel = (ChannelSftp) session.openChannel("sftp");
             sftpChannel.connect();
+            Map<String, String> credetailMap = new HashMap<>();
+            credetailMap.put("host", host);
+            credetailMap.put("port", String.valueOf(port));
+            credetailMap.put("username", username);
+            credetailMap.put("password", password);
             Stage stage = (Stage) hostText.getScene().getWindow();
-            redirectToHome(sftpChannel, stage);
+            redirectToHome(sftpChannel, stage, credetailMap); // TO-Do : Ugly!! find a better way. Credentials needed for multiple file upload/download as it thread needs its own channel.
         } catch (Exception e) {
             message.setText("Failed to connect: " + e.getMessage());
         }
-        System.out.println("Login button clicked!");
     }
 
-    private void redirectToHome(ChannelSftp sftpChannel, Stage stage) {
+    private void redirectToHome(ChannelSftp sftpChannel, Stage stage, Map<String, String> credetailMap) {
         FXMLLoader fxmlLoader = null;
         Parent parent = null;
         Scene scene = null;
@@ -71,13 +78,18 @@ public class SimpleSFTPClient extends Application {
             fxmlLoader = new FXMLLoader(new URL("file:src/main/resources/com/teche/simplesftpclient/Home.fxml"));
             parent = fxmlLoader.load();
             Home homeController = fxmlLoader.getController();
-            homeController.setSftpChannel(sftpChannel);
-            scene = new Scene(parent, 640, 480);
+            homeController.initialize(sftpChannel, credetailMap);
+            scene = new Scene(parent, 700, 520);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
         stage.setTitle("Home");
         stage.setScene(scene);
+        try {
+            Thread.currentThread().sleep(5000); // Allow home screen to load
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
         stage.show();
     }
 
