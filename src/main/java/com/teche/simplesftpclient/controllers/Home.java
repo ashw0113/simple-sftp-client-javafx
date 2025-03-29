@@ -201,12 +201,14 @@ public class Home {
                 @Override
                 protected Void call() {
                     String remotePath = downloadItem.getValue().getPath();
-                    downloadDirectory(remotePath, localPath);
+                    downloadDirectory(remotePath, localPath, null);
                     return null;
                 }
 
-                private void downloadDirectory(String remotePath, String localPath) {
-                    ChannelSftp downloadChannelSftp = Utils.getRemoteSession(credetailMap);
+                private void downloadDirectory(String remotePath, String localPath, ChannelSftp downloadChannelSftp) {
+                    if (downloadChannelSftp == null) {
+                        downloadChannelSftp = Utils.getRemoteSession(credetailMap);
+                    }
                     Path path = Path.of(localPath);
                     if (!Files.exists(path)) {
                         try {
@@ -227,19 +229,16 @@ public class Home {
                             String remoteFilePath = remotePath + "/" + entry.getFilename();
                             String localFilePath = localPath + "/" + entry.getFilename();
                             if (entry.getAttrs().isDir()) {
-                                Thread.ofVirtual().start(() -> {
-                                    downloadDirectory(remoteFilePath, localFilePath);
-                                });
+                                downloadDirectory(remoteFilePath, localFilePath, downloadChannelSftp);
                             } else {
                                 downloadFileMap.put(remoteFilePath, localFilePath);
                             }
                         }
                     }
-                    downloadFile(downloadFileMap);
+                    downloadFile(downloadFileMap, downloadChannelSftp);
                 }
 
-                private void downloadFile(Map<String, String> downloadFileMap) {
-                    ChannelSftp downloadChannelSftp = (ChannelSftp) Utils.getRemoteSession(credetailMap);
+                private void downloadFile(Map<String, String> downloadFileMap, ChannelSftp downloadChannelSftp) {
                     for (Map.Entry<String, String> entry : downloadFileMap.entrySet()) {
                         String remotePath = entry.getKey();
                         String localPath = entry.getValue();
@@ -359,24 +358,27 @@ public class Home {
         if (directory != null && directory.isDirectory()) {
             menuHBox.getChildren().add(uploadLabel);
             menuHBox.getChildren().add(uploadProgressBar);
-            uploadLabel.setText("Uploading..." + directory.getName());
+            uploadLabel.setText("Uploading: " + directory.getName());
             uploadLabel.setVisible(true);
             uploadProgressBar.setVisible(true);
             Task<Void> uploadTask = new Task<>() {
                 @Override
                 protected Void call() throws IOException, SftpException {
-                    uploadDirectoryInternal(directory, tempSelectedItem.getValue().getPath());
+                    String remotePath = tempSelectedItem.getValue().getPath() + "/" + directory.getName();
+                    uploadDirectoryInternal(directory, remotePath, null);
                     return null;
                 }
 
-                private void uploadDirectoryInternal(File localDir, String remotePath) {
-                    ChannelSftp uploadChannelSftp = Utils.getRemoteSession(credetailMap);
+                private void uploadDirectoryInternal(File localDir, String remotePath, ChannelSftp uploadChannelSftp) {
+                    if (uploadChannelSftp == null) {
+                        uploadChannelSftp = Utils.getRemoteSession(credetailMap);
+                    }
                     try {
-                        SftpATTRS stat = uploadChannelSftp.stat(remotePath + "/" + localDir.getName()); // This step is juct to check if the remote file exists or not. Did not find any other way in JSCH.
+                        SftpATTRS stat = uploadChannelSftp.stat(remotePath); // This step is just to check if the remote file exists or not. Did not find any other way in JSCH.
                     } catch (SftpException e) {
                         if (e.id == ChannelSftp.SSH_FX_NO_SUCH_FILE) {
                             try {
-                                uploadChannelSftp.mkdir(remotePath + "/" + localDir.getName());
+                                uploadChannelSftp.mkdir(remotePath);
                             } catch (SftpException ex) {
                                 throw new RuntimeException(ex);
                             }
@@ -387,48 +389,40 @@ public class Home {
                     Map<File, String> uploadFileMap = new HashMap<>();
                     for (File file : localDir.listFiles()) {
                         if (file.isDirectory()) {
-                            remotePath = remotePath + "/" + file.getName();
-                            String finalRemotePath = remotePath;
-                            Thread.ofVirtual().start(() -> {
-                                uploadDirectoryInternal(file, finalRemotePath);
-                            });
+                            String dest = remotePath + "/" + localDir.getName();
+                            uploadDirectoryInternal(file, dest, uploadChannelSftp);
                         } else {
-                            String dest = remotePath + "/" + localDir.getName() + "/" + file.getName();
-                            uploadFileMap.put(file, dest);
-                        }
-                    }
-                    for (Map.Entry<File, String> entry : uploadFileMap.entrySet()) {
-                        File file = entry.getKey();
-                        String dest = entry.getValue();
-                        try (InputStream inputStream = new FileInputStream(file)) {
-                            uploadChannelSftp.put(inputStream, dest, new SftpProgressMonitor() {
-                                private long max = file.length();
-                                private long count = 0;
+                            String dest = remotePath + "/" + file.getName();
+                            try (InputStream inputStream = new FileInputStream(file)) {
+                                uploadChannelSftp.put(inputStream, dest, new SftpProgressMonitor() {
+                                    private long max = file.length();
+                                    private long count = 0;
 
-                                @Override
-                                public void init(int op, String src, String dest, long max) {
-                                    this.max = max;
-                                }
+                                    @Override
+                                    public void init(int op, String src, String dest, long max) {
+                                        this.max = max;
+                                    }
 
-                                @Override
-                                public boolean count(long count) {
-                                    this.count += count;
-                                    uploadedSize[0] += count;
-                                    updateProgress(uploadedSize[0], totalSize);
-                                    return true;
-                                }
+                                    @Override
+                                    public boolean count(long count) {
+                                        this.count += count;
+                                        uploadedSize[0] += count;
+                                        updateProgress(uploadedSize[0], totalSize);
+                                        return true;
+                                    }
 
-                                @Override
-                                public void end() {
-                                    updateProgress(totalSize, totalSize);
-                                }
-                            });
-                        } catch (FileNotFoundException e) {
-                            throw new RuntimeException(e);
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        } catch (SftpException e) {
-                            throw new RuntimeException(e);
+                                    @Override
+                                    public void end() {
+                                        updateProgress(totalSize, totalSize);
+                                    }
+                                });
+                            } catch (FileNotFoundException e) {
+                                throw new RuntimeException(e);
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            } catch (SftpException e) {
+                                throw new RuntimeException(e);
+                            }
                         }
                     }
                 }
@@ -440,6 +434,7 @@ public class Home {
                         menuHBox.getChildren().remove(uploadProgressBar);
                         menuHBox.getChildren().remove(uploadLabel);
                         tempSelectedItem.getChildren().clear();
+                        populateDirectoryTree(null, tempSelectedItem, tempSelectedItem.getValue().getPath());
                     });
                 }
 
@@ -449,7 +444,6 @@ public class Home {
                 }
             };
             uploadProgressBar.progressProperty().bind(uploadTask.progressProperty());
-            populateDirectoryTree(null, tempSelectedItem, tempSelectedItem.getValue().getPath());
             Thread.ofVirtual().start(uploadTask);
         }
     }
@@ -568,31 +562,6 @@ public class Home {
                 }
             }).start();
         });
-    }
-
-    private void downloadFile(String remotePath, String localPath) throws SftpException, IOException {
-        try (OutputStream outputStream = new FileOutputStream(localPath)) {
-            sftpChannel.get(remotePath, outputStream);
-        }
-    }
-
-    private void downloadDirectory(String remotePath, String localPath) throws SftpException, IOException {
-        File localDir = new File(localPath);
-        if (!localDir.exists()) {
-            localDir.mkdirs();
-        }
-        Vector<ChannelSftp.LsEntry> ls = sftpChannel.ls(remotePath);
-        for (ChannelSftp.LsEntry entry : ls) {
-            if (!entry.getFilename().equals(".") && !entry.getFilename().equals("..")) {
-                String remoteFilePath = remotePath + "/" + entry.getFilename();
-                String localFilePath = localPath + "/" + entry.getFilename();
-                if (entry.getAttrs().isDir()) {
-                    downloadDirectory(remoteFilePath, localFilePath);
-                } else {
-                    downloadFile(remoteFilePath, localFilePath);
-                }
-            }
-        }
     }
 
     private void move(ActionEvent actionEvent) {
