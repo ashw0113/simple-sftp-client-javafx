@@ -22,7 +22,10 @@ public class Utils {
             session.setPassword(password);
             session.setConfig("StrictHostKeyChecking", "no");
             session.setConfig("PreferredAuthentications", "publickey,keyboard-interactive,password");
+            session.setConfig("compression.s2c", "zlib,none");
             session.setConfig("compression.c2s", "zlib,none");
+            session.setConfig("cipher.s2c", "aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc");
+            session.setConfig("cipher.c2s", "aes128-ctr,aes192-ctr,aes256-ctr,aes128-cbc,3des-cbc");
             session.connect(10000);
             channelSftp = (ChannelSftp) session.openChannel("sftp");
             channelSftp.connect();
